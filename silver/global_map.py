@@ -6,9 +6,19 @@ import json
 MAP_PATH = os.path.join(os.path.dirname(__file__), "map_data.json")
 PAD = 20
 #GLOBAL_MAP_SHAPE = (444 + PAD * 2, 436 + PAD * 2)
-GLOBAL_MAP_SHAPE = ((32 * 50) + (PAD * 2), (32 * 50) + (PAD * 2))
+AMOUNT_OF_BANKS = 37
+MAX_AMOUNT_OF_LOCATION_IN_BANK = 86
+MAX_SIZE_OF_LOCATION = 50
+GLOBAL_MAP_SHAPE = ((AMOUNT_OF_BANKS * MAX_SIZE_OF_LOCATION) + (PAD * 2), 
+                    (MAX_AMOUNT_OF_LOCATION_IN_BANK * MAX_SIZE_OF_LOCATION) + (PAD * 2))
 MAP_ROW_OFFSET = PAD
 MAP_COL_OFFSET = PAD
+
+def local_to_global_without_map(ly: int, lx: int, map_n: int, map_bank: int):
+    #print(f"y: {ly}, x: {lx}, map_n: {map_n}, map_bank:{map_bank}")
+    gy = ly + ((map_bank % AMOUNT_OF_BANKS) * 50)
+    gx = lx + (map_n * 50)
+    return gy, gx
 
 with open(MAP_PATH) as map_data:
     MAP_DATA = json.load(map_data)["regions"]

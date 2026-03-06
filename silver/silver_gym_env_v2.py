@@ -13,7 +13,7 @@ from einops import repeat
 from gymnasium import Env, spaces
 from pyboy.utils import WindowEvent
 
-from global_map import GLOBAL_MAP_SHAPE
+from global_map import GLOBAL_MAP_SHAPE, local_to_global_without_map
 
 #FLAGS
 EVENT_FLAGS_START = 0xD7B7
@@ -72,10 +72,18 @@ class SilverGymEnv(Env):
         self.reset_count = 0
         self.all_runs = []
 
-        #NOT UPDATED YET FOR RED
+        # Temp values for the first locations until Mr.Pokemon
+        # Values are (BANK, NUMBER)
         self.essential_map_locations = {
             v:i for i,v in enumerate([
-                7, 6, 4, 5, 3, 1, 10
+                (24, 7),
+                (24, 6),
+                (24, 4),
+                (24, 5),
+                (24, 3),
+                (26, 3),
+                (26, 1),
+                (26, 10)
             ])
         }
 
@@ -102,11 +110,6 @@ class SilverGymEnv(Env):
             WindowEvent.RELEASE_BUTTON_B,
             WindowEvent.RELEASE_BUTTON_START
         ]
-
-        # load event names (parsed from https://github.com/pret/pokered/blob/91dc3c9f9c8fd529bb6e8307b58b96efa0bec67e/constants/event_constants.asm)
-        with open("events.json") as f:
-            event_names = json.load(f)
-        self.event_names = event_names
 
         self.output_shape = (72, 80, self.frame_stacks)
         self.coords_pad = 12
@@ -365,15 +368,9 @@ class SilverGymEnv(Env):
             count = 0
         return 0 if count < 600 else 1
 
-    def local_to_global(self, ly: int, lx: int, map_n: int, map_bank: int):
-        #print(f"y: {ly}, x: {lx}, map_n: {map_n}, map_bank:{map_bank}")
-        gy = ly + ((map_n % 32) * 50)
-        gx = lx + (map_n * 50)
-        return gy, gx
-    
     def get_global_coords(self):
         x_pos, y_pos, map_n, map_bank = self.get_game_coords()
-        return self.local_to_global(y_pos, x_pos, map_n, map_bank)
+        return local_to_global_without_map(y_pos, x_pos, map_n, map_bank)
     
     def update_explore_map(self):
         c = self.get_global_coords()
@@ -519,7 +516,7 @@ class SilverGymEnv(Env):
         ]
 
     def get_all_events_reward(self):
-        # adds up all event flags
+        # adds up all event flags except ones that were already activated from the start
         return max(
             sum([
                 self.bit_count(self.read_m(i))
@@ -530,11 +527,10 @@ class SilverGymEnv(Env):
         )
 
     def get_game_state_reward(self, print_stats=False):
-        # addresses from https://datacrystal.romhacking.net/wiki/Pok%C3%A9mon_Red/Blue:RAM_map
-        # https://github.com/pret/pokered/blob/91dc3c9f9c8fd529bb6e8307b58b96efa0bec67e/constants/event_constants.asm
+        # addresses from https://datacrystal.tcrf.net/wiki/Pok%C3%A9mon_Gold_and_Silver/RAM_map
         state_scores = {
             "event": self.reward_scale * self.update_max_event_rew() * 4,
-            #"level": self.reward_scale * self.get_levels_reward(),
+            "level": self.reward_scale * self.get_levels_reward(),
             "heal": self.reward_scale * self.total_healing_rew * 10,
             #"op_lvl": self.reward_scale * self.update_max_op_level() * 0.2,
             #"dead": self.reward_scale * self.died_count * -0.1,
