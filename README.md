@@ -1,3 +1,7 @@
+# Fine-tuning a RL agent to play Pokemon Silver
+This is a fork of a different project that plays [Pokemon Red](https://github.com/PWhiddy/PokemonRedExperiments) by [PWhiddy](https://github.com/PWhiddy/).
+The goal of this project is to take a pretrained Pokemon Red agent and let him learn to play Pokemon Silver.
+
 # Train RL agents to play Pokemon Red
 
 ### New 10-19-24! Updated & Simplified V2 Training Script - See V2 below
