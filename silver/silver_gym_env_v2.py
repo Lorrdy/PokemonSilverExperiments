@@ -157,8 +157,14 @@ class SilverGymEnv(Env):
 
         self.agent_stats = []
 
-        self.explore_map_dim = GLOBAL_MAP_SHAPE
-        self.explore_map = np.zeros(self.explore_map_dim, dtype=np.uint8)
+        self.num_map_banks = 37
+        self.num_maps_per_bank = 86
+        self.map_h = 50
+        self.map_w = 50
+        self.explore_map = np.zeros(
+            (self.num_map_banks, self.num_maps_per_bank, self.map_h, self.map_w),
+            dtype=np.uint8
+        )
 
         self.recent_screens = np.zeros( self.output_shape, dtype=np.uint8)
         
@@ -373,22 +379,28 @@ class SilverGymEnv(Env):
         return local_to_global_without_map(y_pos, x_pos, map_n, map_bank)
     
     def update_explore_map(self):
-        c = self.get_global_coords()
-        if c[0] >= self.explore_map.shape[0] or c[1] >= self.explore_map.shape[1]:
-            print(f"coord out of bounds! global: {c} game: {self.get_game_coords()}")
-            pass
-        else:
-            self.explore_map[c[0], c[1]] = 255
+        x_pos, y_pos, map_n, map_bank = self.get_game_coords()
+        self.explore_map[map_bank, map_n, y_pos, x_pos] = 255
 
     def get_explore_map(self):
-        c = self.get_global_coords()
-        if c[0] >= self.explore_map.shape[0] or c[1] >= self.explore_map.shape[1]:
-            out = np.zeros((self.coords_pad*2, self.coords_pad*2), dtype=np.uint8)
-        else:
-            out = self.explore_map[
-                c[0]-self.coords_pad:c[0]+self.coords_pad,
-                c[1]-self.coords_pad:c[1]+self.coords_pad
-            ]
+        x_pos, y_pos, map_n, map_bank = self.get_game_coords()
+        pad = self.coords_pad
+
+        m = self.explore_map[map_bank, map_n]
+
+        y0 = max(0, y_pos - pad)
+        y1 = min(m.shape[0], y_pos + pad)
+        x0 = max(0, x_pos - pad)
+        x1 = min(m.shape[1], x_pos + pad)
+
+        out = np.zeros((2*pad, 2*pad), dtype=m.dtype)
+        y_start = pad - (y_pos - y0)
+        y_end   = y_start + (y1 - y0)
+        x_start = pad - (x_pos - x0)
+        x_end   = x_start + (x1 - x0)
+
+        out[y_start:y_end, x_start:x_end] = m[y0:y1, x0:x1]
+
         return repeat(out, 'h w -> (h h2) (w w2)', h2=2, w2=2)
     
     def update_recent_screens(self, cur_screen):
